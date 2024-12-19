@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User:Chế độ Auto</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <h1>Chế độ Auto</h1>
+    <div id="statusTable">
+      <table>
+        <tr>
+          <th>Thời gian</th>
+          <th>Trạng thái cửa</th>
+          <th>Cảm biến</th>
+          <th>Thời gian mở/đóng</th>
+        </tr>
+      </table>
+    </div>
+
+    <script>
+      const ws = new WebSocket("ws://localhost:8080");
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ action: "get_status" }));
+      };
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        const table = document.querySelector("#statusTable table");
+        const row = table.insertRow();
+        row.insertCell(0).innerText = data.timestamp;
+        row.insertCell(1).innerText = data.door_state;
+        row.insertCell(2).innerText = data.sensor_status;
+        row.insertCell(3).innerText = data.time_between;
+      };
+    </script>
+  </body>
+</html>

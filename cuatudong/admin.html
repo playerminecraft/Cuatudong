@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Amin</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <h1>Chế độ Manual và Auto</h1>
+    <div class="switch-container">
+      <span class="switch-label">Chế độ:</span>
+      <label class="switch">
+        <input type="checkbox" id="modeSwitch" onchange="toggleMode()" />
+        <span class="slider"></span>
+      </label>
+      <span id="modeLabel">Manual</span>
+
+      <div class="settings-container" style="display: inline-block; margin-left: 20px">
+        <label for="openDelay">Thời gian trước khi mở cửa (ms):</label>
+        <input type="number" id="openDelay" min="0" value="1000" style="margin-right: 10px" />
+
+        <label for="closeDelay">Thời gian trước khi đóng cửa (ms):</label>
+        <input type="number" id="closeDelay" min="0" value="1000" style="margin-right: 10px" />
+
+        <label for="speed">Tốc độ cửa (%):</label>
+        <!-- <input type="number" id="speed" min="0" max="255" value="50" style="margin-right: 10px" /> -->
+        <input type="range" id="speed" min="0" max="255" value="50" oninput="speedDisplay.value = this.value" />
+        <output id="speedDisplay">50</output>
+        <button onclick="updateSettings()">Gửi thông số</button>
+      </div>
+    </div>
+
+    <div style="text-align: center">
+      <button id="openButton" onclick="sendCommand('open')">Mở cửa</button>
+      <button id="closeButton" onclick="sendCommand('close')">Đóng cửa</button>
+    </div>
+
+    <div id="statusTable">
+      <table>
+        <tr>
+          <th>Thời gian</th>
+          <th>Trạng thái cửa</th>
+          <th>Thời gian mở/đóng</th>
+        </tr>
+      </table>
+    </div>
+    <script>
+      const ws = new WebSocket("ws://localhost:8080");
+      let currentMode = "manual"; // Default mode
+
+      function toggleMode() {
+        const modeSwitch = document.getElementById("modeSwitch");
+        const modeLabel = document.getElementById("modeLabel");
+        const openButton = document.getElementById("openButton");
+        const closeButton = document.getElementById("closeButton");
+
+        if (modeSwitch.checked) {
+          currentMode = "auto";
+          modeLabel.innerText = "Auto";
+          openButton.disabled = true;
+          closeButton.disabled = true;
+          sendCommand("auto");
+        } else {
+          currentMode = "manual";
+          modeLabel.innerText = "Manual";
+          openButton.disabled = false;
+          closeButton.disabled = false;
+          sendCommand("manual");
+        }
+      }
+
+      function sendCommand(command) {
+        ws.send(JSON.stringify({ command }));
+      }
+
+      function updateSettings() {
+        const openDelay = document.getElementById("openDelay").value;
+        const closeDelay = document.getElementById("closeDelay").value;
+        const speed = document.getElementById("speed").value;
+        const settings = {
+          setting: "door_setting",
+          openDelay: parseInt(openDelay, 10),
+          closeDelay: parseInt(closeDelay, 10),
+          speed: parseInt(speed, 10),
+        };
+
+        ws.send(JSON.stringify(settings));
+      }
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        // Kiểm tra và cập nhật trạng thái cửa
+        if (data.lastDoorState) {
+          const openButton = document.getElementById("openButton");
+          const closeButton = document.getElementById("closeButton");
+
+          if (data.lastDoorState === "open") {
+            openButton.disabled = true;
+            closeButton.disabled = false;
+          } else if (data.lastDoorState === "close") {
+            openButton.disabled = false;
+            closeButton.disabled = true;
+          }
+        }
+
+        // Xử lý các dữ liệu khác nếu có
+        if (data.timestamp && data.door_state && data.time_between) {
+          const table = document.querySelector("#statusTable table");
+
+          let duplicate = false;
+          const rows = table.rows;
+          for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (row.cells[1].innerText === data.door_state && row.cells[0].innerText === data.timestamp) {
+              duplicate = true;
+              break;
+            }
+          }
+
+          if (!duplicate) {
+            const row = table.insertRow();
+            row.insertCell(0).innerText = data.timestamp || "N/A";
+            row.insertCell(1).innerText = data.door_state || "N/A";
+            row.insertCell(2).innerText = data.time_between + " ms" || "N/A";
+          }
+        }
+      };
+    </script>
+  </body>
+</html>

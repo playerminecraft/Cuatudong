@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - ESP8266 WebSocket</title>
+    <style>
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+      }
+
+      .login-container {
+        width: 300px;
+        padding: 20px;
+        background-color: #fff;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        text-align: center;
+      }
+
+      h2 {
+        margin-bottom: 20px;
+        font-size: 24px;
+        color: #333;
+      }
+
+      input[type="text"],
+      input[type="password"] {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 15px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 16px;
+      }
+
+      button {
+        width: 100%;
+        padding: 10px;
+        background-color: #007bff;
+        border: none;
+        border-radius: 5px;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color: #0056b3;
+      }
+
+      .error {
+        color: red;
+        font-size: 14px;
+        display: none;
+        margin-bottom: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-container">
+      <h2>Đăng nhập</h2>
+
+      <div class="error" id="error-message">Vui lòng nhập thông tin hợp lệ!</div>
+
+      <input type="text" id="username" placeholder="Tên người dùng" required />
+      <input type="password" id="password" placeholder="Mật khẩu" required />
+      <button onclick="login()">Đăng nhập</button>
+    </div>
+
+    <script>
+      function login() {
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+
+        if (username === "" || password === "") {
+          document.getElementById("error-message").style.display = "block";
+          return;
+        }
+
+        // Kết nối WebSocket với server
+        const ws = new WebSocket("ws://" + window.location.hostname + ":3000");
+
+        ws.onopen = function () {
+          ws.send(JSON.stringify({ username: username, password: password }));
+          console.log("Kết nối thành công! Thông tin đăng nhập đã được gửi.");
+        };
+
+        ws.onmessage = function (event) {
+          if (event.data === "Đăng nhập thành công!") {
+            window.location.href = "/index.html"; // Chuyển hướng sang dashboard.html
+          } else {
+            document.getElementById("error-message").innerText = "Tên người dùng hoặc mật khẩu không chính xác!";
+            document.getElementById("error-message").style.display = "block";
+          }
+        };
+
+        ws.onerror = function () {
+          alert("Có lỗi xảy ra khi kết nối với server.");
+        };
+      }
+    </script>
+  </body>
+</html>
